@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Голосование — лучший рисунок</title>
+  <style>
+    :root {
+      --ink: #1c1915;
+      --muted: #6b635b;
+      --paper: #f6f1e8;
+      --card: #fffdf8;
+      --line: #e4d9c8;
+      --accent: #c4522a;
+      --accent-dark: #9a3b1c;
+      --ok: #2f6b4f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, #ffe7c2 0%, transparent 55%),
+        radial-gradient(900px 400px at 100% 0%, #f7d7c4 0%, transparent 50%),
+        var(--paper);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 40px 20px 72px; }
+    header { text-align: center; margin-bottom: 28px; }
+    h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.05; margin: 0 0 8px; font-weight: 600; }
+    .lead { margin: 0 auto; max-width: 520px; color: var(--muted); font-size: 18px; }
+    .note {
+      margin: 18px auto 0;
+      max-width: 560px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 28px;
+    }
+    article {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(80, 50, 20, 0.06);
+    }
+    .art {
+      height: 240px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+    }
+    .art img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .meta { padding: 14px 16px 16px; }
+    h2 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+    p { margin: 0; color: var(--muted); font-size: 15px; }
+    .row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    button {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      background: var(--ink);
+      color: #fff;
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button.picked { background: var(--ok); }
+    button:disabled { cursor: default; opacity: 0.85; }
+    .count {
+      margin-left: auto;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .bar {
+      height: 6px;
+      background: #efe6d8;
+      border-radius: 99px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #e07a45, var(--accent));
+      border-radius: inherit;
+    }
+    footer {
+      margin-top: 28px;
+      text-align: center;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    footer button {
+      background: transparent;
+      color: var(--accent-dark);
+      border: 1px solid var(--line);
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Лучший рисунок</h1>
+      <p class="lead">Выберите один рисунок. Голос сохранится только в этом браузере.</p>
+      <p class="note">Это учебная страница, а не настоящий конкурс и не официальный опрос.</p>
+    </header>
+    <div class="grid" id="grid"></div>
+    <footer>
+      <span id="total">Голосов пока нет</span>
+      <button type="button" id="reset">Сбросить мой голос</button>
+    </footer>
+  </div>
+  <script>
+    const drawings = [
+      { id: "cat", title: "Рыжий кот", author: "Маша, 13 лет", image: "risunok-kot.jpg" },
+      { id: "house", title: "Дом у реки", author: "Лёва, 12 лет", image: "risunok-dom.jpg" },
+      { id: "rocket", title: "Ракета", author: "Аня, 14 лет", image: "risunok-raketa.jpg" },
+      { id: "sun", title: "Солнце и поле", author: "Кирилл, 15 лет", image: "risunok-pole.jpg" },
+      { id: "whale", title: "Кит", author: "Соня, 11 лет", image: "risunok-kit.jpg" },
+      { id: "tree", title: "Дерево", author: "Петя, 10 лет", image: "risunok-derevo.jpg" }
+    ];
+
+    const key = "demo-best-drawing-vote";
+    const grid = document.getElementById("grid");
+    const totalEl = document.getElementById("total");
+
+    function load() {
+      try { return JSON.parse(localStorage.getItem(key)) || { choice: null, counts: {} }; }
+      catch { return { choice: null, counts: {} }; }
+    }
+    function save(state) { localStorage.setItem(key, JSON.stringify(state)); }
+
+    function render() {
+      const state = load();
+      const sum = drawings.reduce((n, d) => n + (state.counts[d.id] || 0), 0);
+      grid.innerHTML = drawings.map((d) => {
+        const n = state.counts[d.id] || 0;
+        const pct = sum ? Math.round((n / sum) * 100) : 0;
+        const picked = state.choice === d.id;
+        return `<article>
+          <div class="art"><img src="${d.image}" alt="${d.title}"></div>
+          <div class="meta">
+            <h2>${d.title}</h2>
+            <p>${d.author}</p>
+            <div class="row">
+              <button type="button" data-id="${d.id}" class="${picked ? "picked" : ""}" ${state.choice ? "disabled" : ""}>
+                ${picked ? "Ваш выбор" : "Голосовать"}
+              </button>
+              <span class="count">${n}</span>
+            </div>
+            <div class="bar"><span style="width:${pct}%"></span></div>
+          </div>
+        </article>`;
+      }).join("");
+      totalEl.textContent = sum
+        ? `Всего голосов в этом браузере: ${sum}`
+        : "Голосов пока нет";
+    }
+
+    grid.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-id]");
+      if (!button) return;
+      const state = load();
+      if (state.choice) return;
+      const id = button.dataset.id;
+      state.choice = id;
+      state.counts[id] = (state.counts[id] || 0) + 1;
+      save(state);
+      render();
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      localStorage.removeItem(key);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
